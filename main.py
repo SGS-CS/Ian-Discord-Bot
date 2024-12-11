@@ -53,6 +53,30 @@ class TestMenuButton(discord.ui.View):
 async def buttonmenu(interaction: discord.Interaction):
     await interaction.response.send_message(content="Please choose an answer:", view=TestMenuButton())
 
+class SelectMenu(discord.ui.View):
+    options = [
+        discord.SelectOption(label="Flashcards", value="1", description="Study individually with flashcards."),
+        discord.SelectOption(label="Solo Quiz", value="2", description="Study individually with multiple-choice questions."),
+        discord.SelectOption(label="Team Quiz", value="3", description="Study in a group with multiple-choice questions.")
+    ]
+
+    @discord.ui.select(placeholder="Select Mode:", options=options)
+    async def menu_callback(self, interaction: discord.Interaction, select):
+        select.disabled=True
+        if select.values[0] == "1":
+            await interaction.response.send_message(content="You chose to play Flashcards")
+        elif select.values[0] == "2":
+            await interaction.response.send_message(content="You chose to play Solo Quiz")
+        elif select.values[0] == "3":
+            await interaction.response.send_message(content="Your color is now yellow")
+        
+@bot.tree.command(name="choosemode", description="Choose the mode you wish to play")
+async def choosemode(interaction: discord.Interaction):
+    await interaction.response.send_message(content="Choose the mode you wish to play", view=SelectMenu())
+
+
+
+
 async def main():
     async with bot:
         await load()
