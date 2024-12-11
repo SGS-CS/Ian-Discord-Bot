@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
 
 import os
 import asyncio
@@ -17,18 +16,18 @@ async def on_ready():
     except Exception as e:
         print("An error with syncing application commands has occured: ", e)
 
-#First Slash Command(will try to put them in a cog later)
-@bot.tree.command(name="hello", description="Says hello to the person who ran the command")
-async def hello(interaction: discord.Interaction):
-    await interaction.response.send_message(f"{interaction.user.mention} Hello there!")
-
 with open("token.txt") as file:
     token = file.read()
 
 async def load():
     for filename in os.listdir("./cogs"):
         if filename.endswith(".py"):
-            await bot.load_extension(f"cogs.{filename[:-3]}")
+            print(f"Attempting to load extension: {filename}")
+            try:
+                await bot.load_extension(f"cogs.{filename[:-3]}")
+                print(f"Successfully loaded: {filename}")
+            except Exception as e:
+                print(f"Failed to load: {filename}\nError: {e}")
 
 async def main():
     async with bot:
