@@ -64,11 +64,11 @@ class SelectMenu(discord.ui.View):
     async def menu_callback(self, interaction: discord.Interaction, select):
         select.disabled=True
         if select.values[0] == "1":
-            await interaction.response.send_message(content="You chose to play Flashcards")
+            await interaction.response.send_message(content="You chose to play Flashcards.")
         elif select.values[0] == "2":
-            await interaction.response.send_message(content="You chose to play Solo Quiz")
+            await interaction.response.send_message(content="You chose to play Solo Quiz.")
         elif select.values[0] == "3":
-            await interaction.response.send_message(content="Your color is now yellow")
+            await interaction.response.send_message(content="You chose to play Team Quiz.")
         
 @bot.tree.command(name="choosemode", description="Choose the mode you wish to play")
 async def choosemode(interaction: discord.Interaction):
