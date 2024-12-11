@@ -74,8 +74,20 @@ class SelectMenu(discord.ui.View):
 async def choosemode(interaction: discord.Interaction):
     await interaction.response.send_message(content="Choose the mode you wish to play", view=SelectMenu())
 
+class ReportModal(discord.ui.Modal, title="Create Question"):
+    question = discord.ui.TextInput(label="Question", placeholder="e.g. What is the capital of Canada?", required=True, max_length=400, style=discord.TextStyle.paragraph)
+    choice_a = discord.ui.TextInput(label="Choice A", placeholder="e.g. Vancouver", required=True, max_length=200, style=discord.TextStyle.short)
+    choice_b = discord.ui.TextInput(label="Choice B", placeholder="e.g. Ottawa", required=True, max_length=200, style=discord.TextStyle.short)
+    choice_c = discord.ui.TextInput(label="Choice C", placeholder="e.g. Toronto", required=True, max_length=200, style=discord.TextStyle.short)
+    choice_d = discord.ui.TextInput(label="Choice D", placeholder="e.g. Montreal", required=True, max_length=200, style=discord.TextStyle.short)
+    #correct_choice = discord.ui.TextInput(label="Correct Choice", placeholder="e.g. B", required=True, max_length=1, style=discord.TextStyle.short)
 
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.send_message(f"{interaction.user.mention} You have created a question, here is what I recieved: \nQuestion: {self.question}\nChoice A: {self.choice_a}\nChoice B: {self.choice_b}\nChoice C: {self.choice_c}\nChoice D: {self.choice_d}\nCorrect Choice: Find out how to bypass 5 box limit", ephemeral=True)
 
+@bot.tree.command(name="createquestion", description="Add a question to a quiz")
+async def createquestion(interaction: discord.Interaction):
+    await interaction.response.send_modal(ReportModal())
 
 async def main():
     async with bot:
