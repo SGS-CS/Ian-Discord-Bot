@@ -29,6 +29,30 @@ async def load():
             except Exception as e:
                 print(f"Failed to load: {filename}\nError: {e}")
 
+class TestMenuButton(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+    
+    @discord.ui.button(label="A", style=discord.ButtonStyle.red)
+    async def button_a(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message(content="You've chosen Choice A.")
+    
+    @discord.ui.button(label="B", style=discord.ButtonStyle.blurple)
+    async def button_b(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message(content="You've chosen Choice B.")
+    
+    @discord.ui.button(label="C", style=discord.ButtonStyle.green)
+    async def button_c(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message(content="You've chosen Choice C.")
+    
+    @discord.ui.button(label="D", style=discord.ButtonStyle.gray)
+    async def button_d(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message(content="You've chosen Choice D.")
+
+@bot.tree.command(name="buttonmenu", description="Prototype of Answer Buttons")
+async def buttonmenu(interaction: discord.Interaction):
+    await interaction.response.send_message(content="Please choose an answer:", view=TestMenuButton())
+
 async def main():
     async with bot:
         await load()
