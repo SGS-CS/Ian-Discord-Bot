@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+import sqlite3
 
 class Slash(commands.Cog):
     def __init__(self, bot):
@@ -35,6 +36,38 @@ class Slash(commands.Cog):
         ping_embed.add_field(name=f"{self.bot.user.name}'s Latency (ms): ", value=f"{round(self.bot.latency * 1000)}ms.", inline=False)
         ping_embed.set_footer(text=f"Requested by {interaction.user.name}", icon_url=interaction.user.avatar)
         await interaction.response.send_message(embed=ping_embed)
+    
+    @app_commands.command(name="getquestion", description="Retrieve a question by ID from the database")
+    async def getquestion(self, interaction: discord.Interaction, question_id: int):
+        # Connect to the database
+        conn = sqlite3.connect("quiz.db")
+        cursor = conn.cursor()
+
+        # Fetch the question from the database
+        cursor.execute("SELECT question, choice_a, choice_b, choice_c, choice_d FROM questions WHERE id=?", (question_id,))
+        result = cursor.fetchone()
+        conn.close()
+
+        # If no result is found
+        if not result:
+            await interaction.response.send_message(f"No question found with ID `{question_id}`.", ephemeral=True)
+            return
+
+        # Unpack the result
+        question, choice_a, choice_b, choice_c, choice_d = result
+
+        # Format the message
+        response_message = (
+            f"**Question ID:** `{question_id}`\n"
+            f"**Question:** {question}\n\n"
+            f"**Choice A:** {choice_a}\n"
+            f"**Choice B:** {choice_b}\n"
+            f"**Choice C:** {choice_c}\n"
+            f"**Choice D:** {choice_d}"
+        )
+
+        # Send the formatted message
+        await interaction.response.send_message(response_message)
 
 async def setup(bot):
     await bot.add_cog(Slash(bot))
