@@ -3,6 +3,8 @@ from discord.ext import commands
 
 import os
 import asyncio
+import sqlite3
+
 
 bot = commands.Bot(command_prefix=".", intents=discord.Intents.all())
 
@@ -74,7 +76,7 @@ class SelectMenu(discord.ui.View):
 async def choosemode(interaction: discord.Interaction):
     await interaction.response.send_message(content="Choose the mode you wish to play", view=SelectMenu())
 
-class ReportModal(discord.ui.Modal, title="Create Question"):
+class CreateModal(discord.ui.Modal, title="Create Question"):
     question = discord.ui.TextInput(label="Question", placeholder="e.g. What is the capital of Canada?", required=True, max_length=400, style=discord.TextStyle.paragraph)
     choice_a = discord.ui.TextInput(label="Choice A", placeholder="e.g. Vancouver", required=True, max_length=200, style=discord.TextStyle.short)
     choice_b = discord.ui.TextInput(label="Choice B", placeholder="e.g. Ottawa", required=True, max_length=200, style=discord.TextStyle.short)
@@ -83,11 +85,22 @@ class ReportModal(discord.ui.Modal, title="Create Question"):
     #correct_choice = discord.ui.TextInput(label="Correct Choice", placeholder="e.g. B", required=True, max_length=1, style=discord.TextStyle.short)
 
     async def on_submit(self, interaction: discord.Interaction):
-        await interaction.response.send_message(f"{interaction.user.mention} You have created a question, here is what I recieved: \nQuestion: {self.question}\nChoice A: {self.choice_a}\nChoice B: {self.choice_b}\nChoice C: {self.choice_c}\nChoice D: {self.choice_d}\nCorrect Choice: Find out how to bypass 5 box limit", ephemeral=True)
+        # Store the data in the database
+        conn = sqlite3.connect("quiz.db")
+        cursor = conn.cursor()
+        cursor.execute("""
+        INSERT INTO questions (question, choice_a, choice_b, choice_c, choice_d)
+        VALUES (?, ?, ?, ?, ?)
+        """, (self.question.value, self.choice_a.value, self.choice_b.value, self.choice_c.value, self.choice_d.value))
+        conn.commit()
+        conn.close()
+
+        await interaction.response.send_message(f"{interaction.user.mention}, your question has been saved!", ephemeral=True)
 
 @bot.tree.command(name="createquestion", description="Add a question to a quiz")
 async def createquestion(interaction: discord.Interaction):
-    await interaction.response.send_modal(ReportModal())
+    await interaction.response.send_modal(CreateModal())
+
 
 async def main():
     async with bot:
