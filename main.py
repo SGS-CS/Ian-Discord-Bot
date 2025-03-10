@@ -11,7 +11,7 @@ bot = commands.Bot(command_prefix=".", intents=discord.Intents.all())
 @bot.event
 async def on_ready():
     print("bot is online")
-    await bot.change_presence(activity=discord.Game(name='.help'))
+    await bot.change_presence(activity=discord.Game(name='/help'))
     try:
         synced_commands = await bot.tree.sync()
         print(f"Synced {len(synced_commands)} command(s).")
@@ -48,11 +48,11 @@ class SelectMenu(discord.ui.View):
         elif select.values[0] == "3":
             await interaction.response.send_message(content="You chose to play Team Quiz.")
         
-@bot.tree.command(name="choosemode", description="Choose the mode you wish to play")
+@bot.tree.command(name="choosemode", description="Choose the mode you wish to play(Prototype)")
 async def choosemode(interaction: discord.Interaction):
     await interaction.response.send_message(content="Choose the mode you wish to play", view=SelectMenu())
 
-@bot.tree.command(name="createquestion", description="Add a question to a quiz")
+@bot.tree.command(name="createquestion", description="Add a question to a quiz(Working Feature)")
 @discord.app_commands.describe(
     quiz_name="The name of the quiz",
     question="The quiz question",
@@ -93,7 +93,7 @@ async def createquestion(interaction: discord.Interaction, quiz_name: str, quest
         f"**Correct Answer:** {correct_answer}",
         ephemeral=True
     )
-@bot.tree.command(name="runquiz", description="Start a quiz session")
+@bot.tree.command(name="runquiz", description="Start a quiz session(Working Feature)")
 @discord.app_commands.describe(
     quiz_name="The name of the quiz to run (leave empty if running a single question)",
     question_id="ID of a specific question to run (leave empty if running a quiz)"
