@@ -22,12 +22,10 @@ class Database(commands.Cog):
         choice_a TEXT NOT NULL,
         choice_b TEXT NOT NULL,
         choice_c TEXT NOT NULL,
-        choice_d TEXT NOT NULL
+        choice_d TEXT NOT NULL,
+        correct_choice TEXT NOT NULL
     )
     """)
-
-    conn.commit()
-    conn.close()
 
 async def setup(bot):
     await bot.add_cog(Database(bot))
