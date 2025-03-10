@@ -18,6 +18,8 @@ class Database(commands.Cog):
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS questions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        quiz_name TEXT NOT NULL,
+        user_id TEXT NOT NULL,  -- Changed from INTEGER to TEXT
         question TEXT NOT NULL,
         choice_a TEXT NOT NULL,
         choice_b TEXT NOT NULL,
