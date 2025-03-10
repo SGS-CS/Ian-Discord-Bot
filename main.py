@@ -1,3 +1,4 @@
+# Import all required libraries/packages
 import discord
 from discord.ext import commands
 
@@ -5,32 +6,36 @@ import os
 import asyncio
 import sqlite3
 
-
+# Create a bot instance with the prefix "." and enable all intents
 bot = commands.Bot(command_prefix=".", intents=discord.Intents.all())
 
 @bot.event
 async def on_ready():
+    # Runs when the bot successfully connects to Discord
     print("bot is online")
-    await bot.change_presence(activity=discord.Game(name='/help'))
+    await bot.change_presence(activity=discord.Game(name='/help')) # Set bot's status
     try:
-        synced_commands = await bot.tree.sync()
+        synced_commands = await bot.tree.sync() # Sync application commands (slash commands)
         print(f"Synced {len(synced_commands)} command(s).")
     except Exception as e:
         print("An error with syncing application commands has occured: ", e)
 
+# Read the bot token from a file (security measure to avoid hardcoding it)
 with open("token.txt") as file:
     token = file.read()
 
+# Function to load cogs(files) from the "cogs" folder
 async def load():
     for filename in os.listdir("./cogs"):
-        if filename.endswith(".py"):
+        if filename.endswith(".py"): # Only load Python files
             print(f"Attempting to load extension: {filename}")
             try:
-                await bot.load_extension(f"cogs.{filename[:-3]}")
+                await bot.load_extension(f"cogs.{filename[:-3]}") # Remove .py before outputting debug message
                 print(f"Successfully loaded: {filename}")
             except Exception as e:
                 print(f"Failed to load: {filename}\nError: {e}")
 
+# A dropdown menu to choose quiz modes(prototype)
 class SelectMenu(discord.ui.View):
     options = [
         discord.SelectOption(label="Flashcards", value="1", description="Study individually with flashcards."),
@@ -40,18 +45,20 @@ class SelectMenu(discord.ui.View):
 
     @discord.ui.select(placeholder="Select Mode:", options=options)
     async def menu_callback(self, interaction: discord.Interaction, select):
-        select.disabled=True
+        select.disabled=True # Disable the dropdown after selection
         if select.values[0] == "1":
             await interaction.response.send_message(content="You chose to play Flashcards.")
         elif select.values[0] == "2":
             await interaction.response.send_message(content="You chose to play Solo Quiz.")
         elif select.values[0] == "3":
             await interaction.response.send_message(content="You chose to play Team Quiz.")
-        
+
+# Slash command to open the quiz mode selection menu(prototype)
 @bot.tree.command(name="choosemode", description="Choose the mode you wish to play(Prototype)")
 async def choosemode(interaction: discord.Interaction):
     await interaction.response.send_message(content="Choose the mode you wish to play", view=SelectMenu())
 
+# Slash command to create a new quiz question and store it in the database
 @bot.tree.command(name="createquestion", description="Add a question to a quiz(Working Feature)")
 @discord.app_commands.describe(
     quiz_name="The name of the quiz",
@@ -72,16 +79,18 @@ async def createquestion(interaction: discord.Interaction, quiz_name: str, quest
     
     user_name = interaction.user.name  # Store the username instead of user ID
 
+    # Connect to SQLite database and insert the new question
     conn = sqlite3.connect("quiz.db")
     cursor = conn.cursor()
     cursor.execute("""
     INSERT INTO questions (quiz_name, user_id, question, choice_a, choice_b, choice_c, choice_d, correct_choice)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     """, (quiz_name, user_name, question, choice_a, choice_b, choice_c, choice_d, correct_answer))
-    question_id = cursor.lastrowid
+    question_id = cursor.lastrowid # Get the newly inserted question ID
     conn.commit()
     conn.close()
 
+    # Send confirmation message with question details
     await interaction.response.send_message(
         f"**Question added to '{quiz_name}'!**\n"
         f"**Question ID:** `{question_id}`\n\n"
@@ -91,8 +100,10 @@ async def createquestion(interaction: discord.Interaction, quiz_name: str, quest
         f"**C:** {choice_c}\n"
         f"**D:** {choice_d}\n"
         f"**Correct Answer:** {correct_answer}",
-        ephemeral=True
+        ephemeral=True # Only visible to the user who sent the command
     )
+
+# Slash command to start a quiz session
 @bot.tree.command(name="runquiz", description="Start a quiz session(Working Feature)")
 @discord.app_commands.describe(
     quiz_name="The name of the quiz to run (leave empty if running a single question)",
@@ -108,11 +119,11 @@ async def runquiz(interaction: discord.Interaction, quiz_name: str = None, quest
         cursor.execute("SELECT user_id, question, choice_a, choice_b, choice_c, choice_d, correct_choice FROM questions WHERE id = ?", (question_id,))
         question_data = cursor.fetchone()
         if question_data:
-            questions = [question_data]  # Put it in a list for consistency
+            questions = [question_data]  # Store as a list for consistency
         else:
             questions = []
     elif quiz_name:
-        # Fetch all questions from the given quiz, shuffled
+        # Fetch all questions from the given quiz(shuffled)
         cursor.execute("SELECT user_id, question, choice_a, choice_b, choice_c, choice_d, correct_choice FROM questions WHERE quiz_name = ? ORDER BY RANDOM()", (quiz_name,))
         questions = cursor.fetchall()
     else:
@@ -137,6 +148,7 @@ async def runquiz(interaction: discord.Interaction, quiz_name: str = None, quest
     for question_data in questions:
         _, question, choice_a, choice_b, choice_c, choice_d, correct_answer = question_data
 
+        # Create an embed for the question
         quiz_embed = discord.Embed(title="Question:", description=question, color=discord.Color.blurple())
         quiz_embed.add_field(name="A", value=choice_a, inline=False)
         quiz_embed.add_field(name="B", value=choice_b, inline=False)
@@ -144,6 +156,7 @@ async def runquiz(interaction: discord.Interaction, quiz_name: str = None, quest
         quiz_embed.add_field(name="D", value=choice_d, inline=False)
         quiz_embed.set_footer(text="Click a button to answer!")
 
+        # View with answer buttons
         class QuizView(discord.ui.View):
             def __init__(self):
                 super().__init__(timeout=30)
@@ -171,9 +184,9 @@ async def runquiz(interaction: discord.Interaction, quiz_name: str = None, quest
                 self.answered = True
 
                 if choice == correct_answer:
-                    await interaction.response.send_message(f"**Correct!** {interaction.user.mention} chose the right answer!", ephemeral=True)
+                    await interaction.response.send_message(f"**Correct!** {interaction.user.mention} chose the right answer!")
                 else:
-                    await interaction.response.send_message(f"**Incorrect!** The correct answer was **{correct_answer}**.", ephemeral=True)
+                    await interaction.response.send_message(f"**Incorrect!** The correct answer was **{correct_answer}**.")
 
                 # Disable buttons after an answer is selected
                 for item in self.children:
@@ -181,7 +194,7 @@ async def runquiz(interaction: discord.Interaction, quiz_name: str = None, quest
                 await interaction.message.edit(view=self)
 
         await interaction.followup.send(embed=quiz_embed, view=QuizView())
-        await asyncio.sleep()  # Short delay before the next question
+        await asyncio.sleep(5)  # Short delay before the next question
 
 async def main():
     async with bot:
