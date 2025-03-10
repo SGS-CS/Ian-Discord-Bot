@@ -12,14 +12,6 @@ class Slash(commands.Cog):
         print(f"{__name__} is online")
 
     # Slash Commands
-    @app_commands.command(name="hello", description="Says hello to the person who ran the command")
-    async def hello(self, interaction: discord.Interaction):
-        await interaction.response.send_message(f"{interaction.user.mention} Hello there!")
-
-    @app_commands.command(name="goodmorning", description="Sends a good morning message")
-    async def goodmorning(self, interaction: discord.Interaction):
-        await interaction.response.send_message(f"Good morning, {interaction.user.mention}!")
-
     @app_commands.command(name="sendembed", description="Sends an embed message")
     async def sendembed(self, interaction: discord.Interaction):
         embeded_msg = discord.Embed(title="Title of embed", description="Description of embed", color=discord.Color.green())

@@ -133,7 +133,7 @@ async def runquiz(interaction: discord.Interaction):
     question_id, question, choice_a, choice_b, choice_c, choice_d, correct_answer = question_data
 
     # Create an embed for the question
-    quiz_embed = discord.Embed(title="Quiz Time! 🎓", description=question, color=discord.Color.blurple())
+    quiz_embed = discord.Embed(title="Question:", description=question, color=discord.Color.blurple())
     quiz_embed.add_field(name="A", value=choice_a, inline=False)
     quiz_embed.add_field(name="B", value=choice_b, inline=False)
     quiz_embed.add_field(name="C", value=choice_c, inline=False)
