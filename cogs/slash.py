@@ -153,7 +153,7 @@ class Slash(commands.Cog):
 
         # Set footer and send message
         help_embed.set_footer(text=f"Requested by {interaction.user.name}", icon_url=interaction.user.avatar)
-        await interaction.response.send_message(embed=help_embed, ephemeral=True)
+        await interaction.response.send_message(embed=help_embed)
 
 async def setup(bot):
     await bot.add_cog(Slash(bot)) # Adds this cog to the bot

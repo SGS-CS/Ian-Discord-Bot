@@ -140,13 +140,15 @@ async def runquiz(interaction: discord.Interaction, quiz_name: str = None, quest
         await interaction.response.send_message("You are not the creator of this quiz!")
         return
 
+    total_questions = len(questions)
+    score = 0
+
     if question_id:
         await interaction.response.send_message(f"Starting question ID: `{question_id}`! Get ready...")
     elif quiz_name:
-        await interaction.response.send_message(f"Starting quiz **'{quiz_name}'**! Get ready...")
+        await interaction.response.send_message(f"Starting quiz **'{quiz_name}'** with **{total_questions}** question(s)! Get ready...")
 
-
-    for question_data in questions:
+    for i, question_data in enumerate(questions):
         _, question, a, b, c, d, correct_answer, image_url = question_data
 
         embed = discord.Embed(title="Question", description=question, color=discord.Color.blurple())
@@ -163,11 +165,12 @@ async def runquiz(interaction: discord.Interaction, quiz_name: str = None, quest
         answered = False
 
         async def button_callback(interaction: discord.Interaction, choice: str):
-            nonlocal answered
+            nonlocal answered, score
             if answered:
                 return
             answered = True
             if choice == correct_answer:
+                score += 1
                 await interaction.response.send_message(f"✅ Correct! {interaction.user.mention}")
             else:
                 await interaction.response.send_message(f"❌ Incorrect! {interaction.user.mention} Correct answer: **{correct_answer}**")
@@ -195,7 +198,14 @@ async def runquiz(interaction: discord.Interaction, quiz_name: str = None, quest
                 item.disabled = True
             await message.edit(view=view)
 
+        # Show how many are left
+        if quiz_name:
+            if i < total_questions - 1:
+                await interaction.followup.send(f"Questions remaining: **{total_questions - (i + 1)}**")
         await asyncio.sleep(2)
+
+    if quiz_name:
+        await interaction.followup.send(f"Quiz complete! **You scored {score} out of {total_questions}.**")
 async def main():
     async with bot:
         await load()
