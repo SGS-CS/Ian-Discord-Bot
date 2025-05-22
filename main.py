@@ -67,7 +67,8 @@ async def choosemode(interaction: discord.Interaction):
     choice_b="Option B",
     choice_c="Option C",
     choice_d="Option D",
-    correct_answer="The correct answer (A, B, C, or D)"
+    correct_answer="The correct answer (A, B, C, or D)",
+    image_url="Optional image URL for the question"
 )
 @discord.app_commands.choices(correct_answer=[
     discord.app_commands.Choice(name="A", value="A"),
@@ -75,22 +76,25 @@ async def choosemode(interaction: discord.Interaction):
     discord.app_commands.Choice(name="C", value="C"),
     discord.app_commands.Choice(name="D", value="D"),
 ])
-async def createquestion(interaction: discord.Interaction, quiz_name: str, question: str, choice_a: str, choice_b: str, choice_c: str, choice_d: str, correct_answer: str):
-    
-    user_name = interaction.user.name  # Store the username instead of user ID
-
-    # Connect to SQLite database and insert the new question
+async def createquestion(interaction: discord.Interaction, quiz_name: str, question: str, choice_a: str, choice_b: str, choice_c: str, choice_d: str, correct_answer: str, image_url: str = None):
+    user_name = interaction.user.name
     conn = sqlite3.connect("quiz.db")
     cursor = conn.cursor()
+
+    # Ensure the image_url column exists (one-time safety check)
+    try:
+        cursor.execute("ALTER TABLE questions ADD COLUMN image_url TEXT")
+    except:
+        pass  # Ignore if it already exists
+
     cursor.execute("""
-    INSERT INTO questions (quiz_name, user_id, question, choice_a, choice_b, choice_c, choice_d, correct_choice)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (quiz_name, user_name, question, choice_a, choice_b, choice_c, choice_d, correct_answer))
-    question_id = cursor.lastrowid # Get the newly inserted question ID
+    INSERT INTO questions (quiz_name, user_id, question, choice_a, choice_b, choice_c, choice_d, correct_choice, image_url)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (quiz_name, user_name, question, choice_a, choice_b, choice_c, choice_d, correct_answer, image_url))
+    question_id = cursor.lastrowid
     conn.commit()
     conn.close()
 
-    # Send confirmation message with question details
     await interaction.response.send_message(
         f"**Question added to '{quiz_name}'!**\n"
         f"**Question ID:** `{question_id}`\n\n"
@@ -99,10 +103,11 @@ async def createquestion(interaction: discord.Interaction, quiz_name: str, quest
         f"**B:** {choice_b}\n"
         f"**C:** {choice_c}\n"
         f"**D:** {choice_d}\n"
-        f"**Correct Answer:** {correct_answer}",
-        ephemeral=True # Only visible to the user who sent the command
+        f"**Correct Answer:** {correct_answer}\n"
+        f"**Image URL:** {image_url or 'None'}",
+        ephemeral=True
     )
-
+    
 # Slash command to start a quiz session
 @bot.tree.command(name="runquiz", description="Start a quiz session(Working Feature)")
 @discord.app_commands.describe(
@@ -110,21 +115,15 @@ async def createquestion(interaction: discord.Interaction, quiz_name: str, quest
     question_id="ID of a specific question to run (leave empty if running a quiz)"
 )
 async def runquiz(interaction: discord.Interaction, quiz_name: str = None, question_id: int = None):
-    user_name = interaction.user.name  # Compare using username instead of numeric ID
+    user_name = interaction.user.name
     conn = sqlite3.connect("quiz.db")
     cursor = conn.cursor()
 
     if question_id:
-        # Fetch a specific question by ID
-        cursor.execute("SELECT user_id, question, choice_a, choice_b, choice_c, choice_d, correct_choice FROM questions WHERE id = ?", (question_id,))
-        question_data = cursor.fetchone()
-        if question_data:
-            questions = [question_data]  # Store as a list for consistency
-        else:
-            questions = []
+        cursor.execute("SELECT user_id, question, choice_a, choice_b, choice_c, choice_d, correct_choice, image_url FROM questions WHERE id = ?", (question_id,))
+        questions = [cursor.fetchone()]
     elif quiz_name:
-        # Fetch all questions from the given quiz(shuffled)
-        cursor.execute("SELECT user_id, question, choice_a, choice_b, choice_c, choice_d, correct_choice FROM questions WHERE quiz_name = ? ORDER BY RANDOM()", (quiz_name,))
+        cursor.execute("SELECT user_id, question, choice_a, choice_b, choice_c, choice_d, correct_choice, image_url FROM questions WHERE quiz_name = ? ORDER BY RANDOM()", (quiz_name,))
         questions = cursor.fetchall()
     else:
         await interaction.response.send_message("Please provide either a quiz name or a question ID.", ephemeral=True)
@@ -132,70 +131,71 @@ async def runquiz(interaction: discord.Interaction, quiz_name: str = None, quest
 
     conn.close()
 
-    if not questions:
-        await interaction.response.send_message("No questions found or you don't have permission.", ephemeral=True)
+    if not questions or questions[0] is None:
+        await interaction.response.send_message("No questions found or you don't have permission.")
         return
 
-    # Ensure only the creator can run the quiz
     creator_name = questions[0][0]
     if creator_name != user_name:
-        await interaction.response.send_message("You are not the creator of this quiz!", ephemeral=True)
+        await interaction.response.send_message("You are not the creator of this quiz!")
         return
 
-    await interaction.response.send_message(f"Starting quiz **'{quiz_name}'**! Get ready...", ephemeral=True)
+    if question_id:
+        await interaction.response.send_message(f"Starting question ID: `{question_id}`! Get ready...")
+    elif quiz_name:
+        await interaction.response.send_message(f"Starting quiz **'{quiz_name}'**! Get ready...")
 
-    # Loop through all questions
+
     for question_data in questions:
-        _, question, choice_a, choice_b, choice_c, choice_d, correct_answer = question_data
+        _, question, a, b, c, d, correct_answer, image_url = question_data
 
-        # Create an embed for the question
-        quiz_embed = discord.Embed(title="Question:", description=question, color=discord.Color.blurple())
-        quiz_embed.add_field(name="A", value=choice_a, inline=False)
-        quiz_embed.add_field(name="B", value=choice_b, inline=False)
-        quiz_embed.add_field(name="C", value=choice_c, inline=False)
-        quiz_embed.add_field(name="D", value=choice_d, inline=False)
-        quiz_embed.set_footer(text="Click a button to answer!")
+        embed = discord.Embed(title="Question", description=question, color=discord.Color.blurple())
+        embed.add_field(name="A", value=a, inline=False)
+        embed.add_field(name="B", value=b, inline=False)
+        embed.add_field(name="C", value=c, inline=False)
+        embed.add_field(name="D", value=d, inline=False)
+        embed.set_footer(text="Time remaining: 30s")
 
-        # View with answer buttons
-        class QuizView(discord.ui.View):
-            def __init__(self):
-                super().__init__(timeout=30)
-                self.answered = False
+        if image_url:
+            embed.set_image(url=image_url)
 
-            @discord.ui.button(label="A", style=discord.ButtonStyle.red)
-            async def button_a(self, interaction: discord.Interaction, button: discord.ui.Button):
-                await self.process_answer(interaction, "A")
+        view = discord.ui.View()
+        answered = False
 
-            @discord.ui.button(label="B", style=discord.ButtonStyle.blurple)
-            async def button_b(self, interaction: discord.Interaction, button: discord.ui.Button):
-                await self.process_answer(interaction, "B")
+        async def button_callback(interaction: discord.Interaction, choice: str):
+            nonlocal answered
+            if answered:
+                return
+            answered = True
+            if choice == correct_answer:
+                await interaction.response.send_message(f"✅ Correct! {interaction.user.mention}")
+            else:
+                await interaction.response.send_message(f"❌ Incorrect! {interaction.user.mention} Correct answer: **{correct_answer}**")
+            for item in view.children:
+                item.disabled = True
+            await message.edit(view=view)
 
-            @discord.ui.button(label="C", style=discord.ButtonStyle.green)
-            async def button_c(self, interaction: discord.Interaction, button: discord.ui.Button):
-                await self.process_answer(interaction, "C")
+        for label, style in zip(["A", "B", "C", "D"], [discord.ButtonStyle.red, discord.ButtonStyle.blurple, discord.ButtonStyle.green, discord.ButtonStyle.gray]):
+            button = discord.ui.Button(label=label, style=style)
+            button.callback = lambda i, choice=label: button_callback(i, choice)
+            view.add_item(button)
 
-            @discord.ui.button(label="D", style=discord.ButtonStyle.gray)
-            async def button_d(self, interaction: discord.Interaction, button: discord.ui.Button):
-                await self.process_answer(interaction, "D")
+        message = await interaction.followup.send(embed=embed, view=view, wait=True)
 
-            async def process_answer(self, interaction: discord.Interaction, choice):
-                if self.answered:
-                    return  # Ignore multiple clicks
-                self.answered = True
+        for remaining in range(29, -1, -1):
+            if answered:
+                break
+            embed.set_footer(text=f"Time remaining: {remaining}s")
+            await message.edit(embed=embed)
+            await asyncio.sleep(0.7)
 
-                if choice == correct_answer:
-                    await interaction.response.send_message(f"**Correct!** {interaction.user.mention} chose the right answer!")
-                else:
-                    await interaction.response.send_message(f"**Incorrect!** The correct answer was **{correct_answer}**.")
+        if not answered:
+            await interaction.followup.send("⏰ Time's up! No answer was selected.")
+            for item in view.children:
+                item.disabled = True
+            await message.edit(view=view)
 
-                # Disable buttons after an answer is selected
-                for item in self.children:
-                    item.disabled = True
-                await interaction.message.edit(view=self)
-
-        await interaction.followup.send(embed=quiz_embed, view=QuizView())
-        await asyncio.sleep(5)  # Short delay before the next question
-
+        await asyncio.sleep(2)
 async def main():
     async with bot:
         await load()

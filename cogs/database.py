@@ -21,15 +21,17 @@ class Database(commands.Cog):
     CREATE TABLE IF NOT EXISTS questions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         quiz_name TEXT NOT NULL,
-        user_id TEXT NOT NULL,  -- Changed from INTEGER to TEXT
+        user_id TEXT NOT NULL,
         question TEXT NOT NULL,
         choice_a TEXT NOT NULL,
         choice_b TEXT NOT NULL,
         choice_c TEXT NOT NULL,
         choice_d TEXT NOT NULL,
-        correct_choice TEXT NOT NULL
+        correct_choice TEXT NOT NULL,
+        image_url TEXT
     )
     """)
+
 
 async def setup(bot):
     await bot.add_cog(Database(bot)) # Adds this cog to the bot
